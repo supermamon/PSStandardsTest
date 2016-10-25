@@ -40,7 +40,7 @@ Function Invoke-ModuleStandardsTest {
 
   Write-Output ""
   Write-Output "***************************************************************"
-  Write-Output "* Performing Pester test on $ModuleName v$ModuleVersion"
+  Write-Output "* Performing Standards test on $ModuleName v$ModuleVersion"
   Write-Output "***************************************************************"
 
   Describe "Module $ModuleName" {
@@ -60,15 +60,15 @@ Function Invoke-ModuleStandardsTest {
         $Module.Description.Length  | Should BeGreaterThan 0
 
         # Count words
-        $Module.Description | `
-        Measure-Object -Word | `
+        $Module.Description | 
+        Measure-Object -Word | 
         Select-Object -ExpandProperty Words | Should BeGreaterThan 5
 
       }
 
     }
 
-    Get-Command -Module $ModuleName | `
+    Get-Command -Module $ModuleName | 
     ForEach-Object {
 
       $Command = $_
@@ -103,8 +103,8 @@ Function Invoke-ModuleStandardsTest {
         }
 
         It "Command $($Command.Name) has a description with at least 5 words." {
-          $CommandDescription | `
-          Measure-Object -Word | `
+          $CommandDescription | 
+          Measure-Object -Word | 
           Select-Object -ExpandProperty Words | Should BeGreaterThan 5
         }
 
@@ -143,7 +143,7 @@ Push-Location $PSScriptRoot | Out-Null
 
 $ProjectRoot = (Join-Path $PSScriptRoot '..\')
 
-Get-ChildItem -Path $ProjectRoot -Directory -Exclude Tests | `
+Get-ChildItem -Path $ProjectRoot -Directory -Exclude Tests |
 ForEach-Object {
 
   Write-Verbose "Processing folder $($_.Name)"
