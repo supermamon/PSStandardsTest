@@ -35,13 +35,15 @@ Function Invoke-ModuleStandardsTest {
   Import the module using it's path
   #>
   Import-Module (Join-Path $PSScriptRoot ..\$ModuleName)
-
   $ModuleVersion = (Get-Module $ModuleName).Version
+
+  $IsBelowPS3 = $PSVersionTable.PSVersion -lt '3.0';
 
   Write-Output ""
   Write-Output "***************************************************************"
   Write-Output "* Performing Standards test on $ModuleName v$ModuleVersion"
   Write-Output "***************************************************************"
+
 
   Describe "Module $ModuleName" {
     Context "Module Documentation" {
@@ -49,20 +51,28 @@ Function Invoke-ModuleStandardsTest {
 
       It "Has properties populated" {
 
-        $Module.Author      | Should Not BeNullOrEmpty
-        $Module.CompanyName | Should Not BeNullOrEmpty
-        $Module.Copyright   | Should Not BeNullOrEmpty
+        #Properties
         $Module.Description | Should Not BeNullOrEmpty
-
-        $Module.Author.Length       | Should BeGreaterThan 5
-        $Module.CompanyName.Length  | Should BeGreaterThan 5
-        $Module.Copyright.Length    | Should BeGreaterThan 35
         $Module.Description.Length  | Should BeGreaterThan 0
 
         # Count words
         $Module.Description | 
         Measure-Object -Word | 
         Select-Object -ExpandProperty Words | Should BeGreaterThan 5
+
+        if (!$IsBelowPS3) {
+
+          $Module.Author      | Should Not BeNullOrEmpty  
+          $Module.CompanyName | Should Not BeNullOrEmpty
+          $Module.Copyright   | Should Not BeNullOrEmpty
+
+          $Module.Author.Length       | Should BeGreaterThan 5
+          $Module.CompanyName.Length  | Should BeGreaterThan 5
+          $Module.Copyright.Length    | Should BeGreaterThan 35
+
+        }
+        
+        
 
       }
 
@@ -77,8 +87,14 @@ Function Invoke-ModuleStandardsTest {
 
       Context "Command Naming Standards > $Command" {
 
+        if ($IsBelowPS3) {
+          $Parts = $FunctionName -split '-',2
+          $Command | Add-Member -MemberType NoteProperty -Name 'Verb' -Value $Parts[0]
+          $Command | Add-Member -MemberType NoteProperty -Name 'Noun' -Value $Parts[1]
+        } 
+
         It "Command $($Command.Name) has a verb." {
-          ($Command).Verb | Should Not BeNullOrEmpty
+          ($Command).Verb | Should Not BeNullOrEmpty  
         }
         It "Command $($Command.Name) has an accepted verb." {
           (Get-Verb | Select-Object -ExpandProperty Verb) -contains ($Command).Verb | Should Be $True
@@ -93,7 +109,7 @@ Function Invoke-ModuleStandardsTest {
       Context "Command Documentation > $Command" {
 
         It "Command $($Command.Name) has a synopsis that is not the syntax." {
-          $HelpInfo.Synopsis | Should Not BeLike "$FunctionName*"
+          $HelpInfo.Synopsis.Trim() | Should Not BeLike "$FunctionName*"
         }
 
         $CommandDescription = $HelpInfo.Description | Select-Object -ExpandProperty Text 
@@ -112,7 +128,10 @@ Function Invoke-ModuleStandardsTest {
 
         if ($HasExamplesProperty) {
           $Examples = (Select-Object -InputObject $HelpInfo -ExpandProperty examples)
-          $Example = (Get-Member -InputObject $Examples -MemberType NoteProperty -Name example)
+          if ($Examples) {
+            $Example = (Get-Member -InputObject $Examples -MemberType NoteProperty -Name example)  
+          }
+          
         }
 
         It "Command $($Command.Name) has example(s)." {
@@ -139,16 +158,24 @@ Function Invoke-ModuleStandardsTest {
 } #Invoke-ModuleStandardsTest
 
 #-------------------------------------------------------------------------------
-Push-Location $PSScriptRoot | Out-Null
 
-$ProjectRoot = (Join-Path $PSScriptRoot '..\')
+if ($PSVersionTable.PSVersion -eq '2.0') {
+  Write-Warning 'PS v2.0. Creating $PSScriptRoot'
+  $PSScriptRoot = Split-Path $MyInvocation.MyCommand.Path -Parent
+}
+Write-Verbose $PSScriptRoot
 
-Get-ChildItem -Path $ProjectRoot -Directory -Exclude Tests |
+$ProjectRoot = Get-Item (Join-Path $PSScriptRoot '..\')
+
+Push-Location $ProjectRoot | Out-Null
+
+Get-ChildItem -Path $ProjectRoot -Exclude Tests |
+Where-Object {$_.PSIsContainer} |
 ForEach-Object {
 
   Write-Verbose "Processing folder $($_.Name)"
-
   $_ | Invoke-ModuleStandardsTest
+
 }
 
 Pop-Location | Out-Null
