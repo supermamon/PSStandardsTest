@@ -40,4 +40,6 @@ PSStandardsTest
 ````
 
 ## ChangeLog
+* 2016-11-25: Added limited support for PS v2.0.
 * 2016-10-24: Very first draft.
+
