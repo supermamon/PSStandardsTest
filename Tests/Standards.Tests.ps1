@@ -1,5 +1,9 @@
 [CmdletBinding()]
-param()
+param(
+  [Parameter(ValueFromPipeline=$True)]
+  [Alias('Module')]
+  [string]$ModuleFilter = '*'
+)
 
 Function Invoke-ModuleStandardsTest {
   [CmdletBinding()]
@@ -12,24 +16,24 @@ Function Invoke-ModuleStandardsTest {
 
   # Unload the module. Useful when developing new modules to make sure your new 
   # changes are loaded
-  Get-Module $ModuleName | Remove-Module
+  Get-Module $ModuleName | Remove-Module -Force
 
   <#
   Assuming the folder structure is:
   PROJECTNAME
-  ├───SampleModule
-  │   │   SampleModule.Format.ps1xml
-  │   │   SampleModule.psd1
-  │   │   SampleModule.psm1
-  │   │
-  │   ├───Private
-  │   │
-  │   ├───Public
-  │   │       Invoke-Function1.ps1
-  │   │       Invoke-Function2.ps1
-  │   │
-  │   └───Resources
-  └───Tests
+  +---SampleModule
+  ¦   ¦   SampleModule.Format.ps1xml
+  ¦   ¦   SampleModule.psd1
+  ¦   ¦   SampleModule.psm1
+  ¦   ¦
+  ¦   +---Private
+  ¦   ¦
+  ¦   +---Public
+  ¦   ¦       Invoke-Function1.ps1
+  ¦   ¦       Invoke-Function2.ps1
+  ¦   ¦
+  ¦   +---Resources
+  +---Tests
           Standards.Tests.ps1
 
   Import the module using it's path
@@ -170,7 +174,7 @@ $ProjectRoot = Get-Item (Join-Path $PSScriptRoot '..\')
 Push-Location $ProjectRoot | Out-Null
 
 Get-ChildItem -Path $ProjectRoot -Exclude Tests |
-Where-Object {$_.PSIsContainer} |
+Where-Object {$_.Name -like $ModuleFilter -and $_.PSIsContainer } |
 ForEach-Object {
 
   Write-Verbose "Processing folder $($_.Name)"
